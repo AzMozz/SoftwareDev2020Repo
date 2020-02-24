@@ -1,23 +1,35 @@
-// With ActionListener
+//With a Multi-dimensional Array
 
 import java.awt.*;
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import javax.swing.SpringLayout;
 
-// ActionListener Imports 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 
 
 /**
  * @author Mark O'Reilly
  */
 
- // ActionListener is added to the list of interfaces implemented by IPAddressDatabase
 public class IPAddressDatabase extends Frame implements ActionListener, WindowListener
 {
+    int maxEntries = 100;  
+    int numberOfEntries = 0;  
+    int currentEntry = 0;  
+
+    //Declaration of one 2D array for storing the PC/IP data - array has maxEntries by 3 columns
+    String[][] PCInfo = new String[maxEntries][3];   
+
     Label lblPCName, lblPCID, lblIP, lblFind;
     TextField txtPCName, txtPCID, txtIP, txtFind;
     Button btnNew, btnSave, btnDel, btnFind, btnExit, btnFirst, btnPrev, btnNext, btnLast;
@@ -46,7 +58,10 @@ public class IPAddressDatabase extends Frame implements ActionListener, WindowLi
         this.addWindowListener(this);
     }
 
-    public void LocateLabels(SpringLayout myLabelLayout)
+
+    // ------------------------------------------------------------------------------------------
+
+	public void LocateLabels(SpringLayout myLabelLayout)
     {
         lblPCName = LocateALabel(myLabelLayout, lblPCName, "PC Name", 30, 25);
         lblPCID = LocateALabel(myLabelLayout, lblPCID, "PC ID", 30, 50);
@@ -93,12 +108,10 @@ public class IPAddressDatabase extends Frame implements ActionListener, WindowLi
         btnLast = LocateAButton(myButtonLayout, btnLast, ">|", 260, 170, 30, 25);
     }
 
-    // Add an ActionListener to each button.
     public Button LocateAButton(SpringLayout myButtonLayout, Button myButton, String  ButtonCaption, int x, int y, int w, int h)
     {    
         myButton = new Button(ButtonCaption);
         add(myButton);
-	// Add an ActionListener to each button.
         myButton.addActionListener(this);
         myButtonLayout.putConstraint(SpringLayout.WEST, myButton, x, SpringLayout.WEST, this);
         myButtonLayout.putConstraint(SpringLayout.NORTH, myButton, y, SpringLayout.NORTH, this);
@@ -106,68 +119,121 @@ public class IPAddressDatabase extends Frame implements ActionListener, WindowLi
         return myButton;
     }
 
-    
-    // Set up the structure for adding the code later that will be required for each button.
-    //     IE: to respond to user action events, such as clicking the New button.
+
+    // ------------------------------------------------------------------------------------------
+
    public void actionPerformed(ActionEvent e)
     {
         // BUTTON FIRST
         if(e.getSource() == btnFirst)
         {
+            currentEntry = 0;
+            displayEntry(currentEntry);
         }
 
         // BUTTON PREVIOUS
         if(e.getSource() == btnPrev)
         {
+           if(currentEntry > 0)
+           {
+                currentEntry--;
+                displayEntry(currentEntry);
+           }
         }
 
         // BUTTON NEXT
         if (e.getSource()== btnNext)
         {
+            if(currentEntry < numberOfEntries - 1)
+            {
+                currentEntry++;
+                displayEntry(currentEntry);
+            }
         }
 
         // BUTTON LAST
         if(e.getSource() == btnLast)
         {
+            currentEntry = numberOfEntries - 1;
+            displayEntry(currentEntry);
         }
 
         // BUTTON NEW
         if(e.getSource() == btnNew)
         {
-            // This is a temporary line of code so we can test that
-            //      this new actionPerformed method is working.
-            txtPCName.setText("New button clicked...");
+            if (numberOfEntries < maxEntries - 1)
+            {
+                numberOfEntries++;
+                currentEntry = numberOfEntries - 1;
+
+		// *** Reference to the 3 columns of the 2D Array ***
+                PCInfo[currentEntry][0] = ""; 
+                PCInfo[currentEntry][1] = ""; 
+                PCInfo[currentEntry][2] = ""; 
+                displayEntry(currentEntry);
+            }
         }
 
         // BUTTON SAVE
         if(e.getSource() == btnSave)
         {
+            saveEntry(currentEntry);
         }
 
         // BUTTON DELETE
         if(e.getSource()== btnDel)
         {
+            for (int index = currentEntry; index < numberOfEntries; index++)
+            {
+		// *** Reference to the 3 columns of the 2D Array ***
+                PCInfo[index][0] = PCInfo[index + 1][0];
+                PCInfo[index][1]  = PCInfo[index + 1][1];
+                PCInfo[index][2] = PCInfo[index + 1][2];
+            }
+            numberOfEntries--;
+            if (currentEntry > numberOfEntries - 1)
+            {
+                currentEntry = numberOfEntries - 1;
+            }
+            displayEntry(currentEntry);
         }
 
         // BUTTON FIND
         if(e.getSource() == btnFind)
         {   
+            boolean found = false;
+            int index = 0;
+            while (index < numberOfEntries && found == false)
+            {
+		// *** Reference to the the first column of the 2D Array ***
+                if (PCInfo[index][0].equals( txtFind.getText()))
+                {
+                    found = true;
+                }
+                index++;
+            }
+            if (found) 
+            {
+                currentEntry = index - 1;
+                displayEntry(currentEntry);
+            }
         }
         
         // BUTTON EXIT
         if(e.getSource() == btnExit)
         {
-            // Exit the Program
+            writeFile();
             System.exit(0);
         }
            
     }
 
-	
-    // Manage responses to the various Window events
+
+    // ------------------------------------------------------------------------------------------
+
     public void windowClosing(WindowEvent we)
     {
-		// Exit the Program
+        writeFile();
         System.exit(0);
     }
 
@@ -177,6 +243,8 @@ public class IPAddressDatabase extends Frame implements ActionListener, WindowLi
 
     public void windowOpened(WindowEvent we)
     {
+        readFile();
+        displayEntry(currentEntry);
     }
 
     public void windowClosed(WindowEvent we)
@@ -196,4 +264,69 @@ public class IPAddressDatabase extends Frame implements ActionListener, WindowLi
     }
 
 
+    // ------------------------------------------------------------------------------------------
+
+   public void displayEntry(int index)
+    {
+	// *** Reference to the 3 columns of the 2D Array ***
+        txtPCName.setText(PCInfo[index][0]);
+        txtPCID.setText(PCInfo[index][1]);
+        txtIP.setText(PCInfo[index][2]);
+    }
+
+    public void saveEntry(int index)
+    {
+	// *** Reference to the 3 columns of the 2D Array ***
+        PCInfo[index][0] = txtPCName.getText();
+        PCInfo[index][1] = txtPCID.getText();
+        PCInfo[index][2] = txtIP.getText();
+        writeFile();
+    }
+
+    public void readFile()
+    {
+        try
+        {
+            FileInputStream fstream = new FileInputStream("IPAddresses.txt");
+            DataInputStream in = new DataInputStream(fstream);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            int i = 0;  
+            String line;
+            while ((line = br.readLine()) != null)
+            {
+                String[] temp = line.split(",");
+				
+		// *** Reference to the 3 columns of the 2D Array ***
+                PCInfo[i][0] = temp[0]; 
+                PCInfo[i][1] = temp[1]; 
+                PCInfo[i][2] = temp[2]; 
+                i++;  
+            }
+            numberOfEntries = i;    
+            in.close();
+        }
+        catch (Exception e)
+        {
+            System.err.println("Error Reading File: " + e.getMessage());
+        }
+    }
+
+    public void writeFile()
+    {
+        try
+        {
+            PrintWriter out = new PrintWriter(new FileWriter("IPAddresses_New.txt"));
+			
+            // *** Reference to the 3 columns of the 2D Array ***
+            for(int m = 0; m < numberOfEntries; m++){
+                out.println(PCInfo[m][0] +"," + PCInfo[m][1] + "," + PCInfo[m][2]);
+            }
+             out.close();
+        }
+        catch (Exception e)
+        {
+          System.err.println("Error Writing File: " + e.getMessage());
+        }
+    }
+    
 }
